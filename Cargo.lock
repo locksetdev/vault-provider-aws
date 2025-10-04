@@ -1006,17 +1006,18 @@ dependencies = [
 
 [[package]]
 name = "lockset_vault_provider"
-version = "0.1.0"
+version = "0.1.1-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2288dccb5d2336e7fdbb6877f832a97d276dcc4eda229d5fc313f17dd4c8044"
+checksum = "caf184d9847bb994cde646bb0f8b60d46944a7f8d992ffd994c8d93c21244247"
 dependencies = [
  "async-trait",
  "thiserror",
+ "zeroize",
 ]
 
 [[package]]
 name = "lockset_vault_provider_aws"
-version = "0.1.0"
+version = "0.1.1-alpha.2"
 dependencies = [
  "async-trait",
  "aws-credential-types",
@@ -1026,6 +1027,7 @@ dependencies = [
  "lockset_vault_provider",
  "serde",
  "serde_json",
+ "zeroize",
 ]
 
 [[package]]
@@ -2003,3 +2005,18 @@ name = "zeroize"
 version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
+dependencies = [
+ "serde",
+ "zeroize_derive",
+]
+
+[[package]]
+name = "zeroize_derive"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]

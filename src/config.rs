@@ -7,32 +7,29 @@ use aws_types::{
 };
 use lockset_vault_provider::ProviderError;
 use serde::Deserialize;
-use std::str::FromStr;
+use zeroize::{Zeroize, Zeroizing};
 
 /// Defines the supported AWS authentication methods.
-#[derive(Deserialize)]
+#[derive(Deserialize, Zeroize)]
 #[serde(tag = "type")]
 pub enum AwsAuth {
     AccessKey {
-        access_key_id: String,
-        secret_access_key: String,
-        session_token: Option<String>,
+        access_key_id: Zeroizing<String>,
+        secret_access_key: Zeroizing<String>,
     },
 }
 
 /// Defines the structure for the AWS provider configuration.
-#[derive(Deserialize)]
+#[derive(Deserialize, Zeroize)]
 pub struct AwsConfig {
     pub region: String,
     pub auth: AwsAuth,
 }
 
-impl FromStr for AwsConfig {
-    type Err = ProviderError;
-
+impl AwsConfig {
     /// Parses the configuration from a string.
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str(s).map_err(|e| ProviderError::InvalidConfiguration(e.to_string()))
+    pub fn parse(s: &Zeroizing<String>) -> Result<Self, ProviderError> {
+        serde_json::from_str(s.as_str()).map_err(|e| ProviderError::InvalidConfiguration(e.to_string()))
     }
 }
 
@@ -42,20 +39,21 @@ impl Into<SdkConfig> for AwsConfig {
     /// This function ensures that only the credentials provided in the configuration are used,
     /// preventing the SDK from falling back to ambient credentials (e.g., from environment
     /// variables or IAM roles). This is crucial for maintaining isolation and security.
-    fn into(self) -> SdkConfig {
+    fn into(mut self) -> SdkConfig {
         let credentials = match self.auth {
             AwsAuth::AccessKey {
-                access_key_id,
-                secret_access_key,
-                session_token,
+                ref access_key_id,
+                ref secret_access_key,
             } => Credentials::new(
-                access_key_id,
-                secret_access_key,
-                session_token,
+                access_key_id.to_string(),
+                secret_access_key.to_string(),
+                None, // session token
                 None, // expiration
                 "StaticConfig",
             ),
         };
+
+        self.auth.zeroize();
 
         SdkConfig::builder()
             .credentials_provider(SharedCredentialsProvider::new(credentials))

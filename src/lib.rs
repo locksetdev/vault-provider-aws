@@ -1,10 +1,10 @@
 use async_trait::async_trait;
-use std::str::FromStr;
 use aws_sdk_secretsmanager::{
     Client as SecretsManagerClient, error::SdkError as SecretsManagerSdkError,
 };
 use aws_sdk_sts::Client as StsClient;
 use lockset_vault_provider::{ProviderError, ProviderSecret, VaultProvider, VaultProviderFactory};
+use zeroize::{Zeroize, Zeroizing};
 
 mod config;
 
@@ -36,7 +36,7 @@ impl VaultProvider for AwsSecretsManagerProvider {
         })?;
 
         Ok(ProviderSecret {
-            value: value.to_string(),
+            value: Zeroizing::new(value.to_owned()),
             version: resp.version_id().map(String::from),
         })
     }
@@ -44,8 +44,8 @@ impl VaultProvider for AwsSecretsManagerProvider {
 
 #[async_trait]
 impl VaultProviderFactory for AwsSecretsManagerFactory {
-    async fn validate(&self, config_str: &str) -> Result<(), ProviderError> {
-        let config = config::AwsConfig::from_str(config_str)?;
+    async fn validate(&self, config: &Zeroizing<String>) -> Result<(), ProviderError> {
+        let config = config::AwsConfig::parse(config)?;
         let client = StsClient::new(&config.into());
 
         // A simple, low-cost operation to validate credentials and region.
@@ -57,9 +57,14 @@ impl VaultProviderFactory for AwsSecretsManagerFactory {
         Ok(())
     }
 
-    async fn create(&self, config_str: &str) -> Result<Box<dyn VaultProvider>, ProviderError> {
-        let config = config::AwsConfig::from_str(config_str)?;
+    async fn create(
+        &self,
+        mut config_str: Zeroizing<String>,
+    ) -> Result<Box<dyn VaultProvider>, ProviderError> {
+        let config = config::AwsConfig::parse(&config_str)?;
         let client = SecretsManagerClient::new(&config.into());
+
+        config_str.zeroize();
         Ok(Box::new(AwsSecretsManagerProvider { client }))
     }
 }
