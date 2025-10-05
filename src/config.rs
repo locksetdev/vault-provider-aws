@@ -1,6 +1,7 @@
 //! Handles configuration parsing and validation for the AWS provider.
 
 use aws_credential_types::Credentials;
+use aws_sdk_secretsmanager::config::BehaviorVersion;
 use aws_types::{
     region::Region,
     sdk_config::{SdkConfig, SharedCredentialsProvider},
@@ -29,7 +30,8 @@ pub struct AwsConfig {
 impl AwsConfig {
     /// Parses the configuration from a string.
     pub fn parse(s: &Zeroizing<String>) -> Result<Self, ProviderError> {
-        serde_json::from_str(s.as_str()).map_err(|e| ProviderError::InvalidConfiguration(e.to_string()))
+        serde_json::from_str(s.as_str())
+            .map_err(|e| ProviderError::InvalidConfiguration(e.to_string()))
     }
 }
 
@@ -58,6 +60,7 @@ impl Into<SdkConfig> for AwsConfig {
         SdkConfig::builder()
             .credentials_provider(SharedCredentialsProvider::new(credentials))
             .region(Region::new(self.region))
+            .behavior_version(BehaviorVersion::v2025_08_07())
             .build()
     }
 }
